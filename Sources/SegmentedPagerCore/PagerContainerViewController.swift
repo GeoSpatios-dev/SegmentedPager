@@ -17,7 +17,12 @@
 //
 
 #if canImport(UIKit)
+import OSLog
 import UIKit
+
+private let pageInitSignposter = OSSignposter(
+    logger: Logger(subsystem: "SegmentedPager", category: "PageInit")
+)
 
 @MainActor
 public protocol PagerPageProviding: AnyObject {
@@ -270,6 +275,11 @@ public final class PagerContainerViewController: UIViewController {
 
     private func installPage(at index: Int) {
         guard pages[index] == nil, let dataSource else { return }
+
+        // Instruments-visible page creation cost (design doc §9.1: heavy
+        // pages must stay under budget and never build mid-drag).
+        let signpostState = pageInitSignposter.beginInterval("PageInit", id: pageInitSignposter.makeSignpostID())
+        defer { pageInitSignposter.endInterval("PageInit", signpostState) }
 
         let page = dataSource.makePageViewController(at: index)
         pages[index] = page

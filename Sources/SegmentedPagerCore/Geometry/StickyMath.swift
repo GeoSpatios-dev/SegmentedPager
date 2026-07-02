@@ -37,10 +37,19 @@ public struct StickyMath: Equatable, Sendable {
     }
 
     /// Header collapse for a normalized offset, clamped to the header's
-    /// travel range. Negative offsets (pull-down bounce) keep the header
-    /// fully expanded rather than over-expanding it.
+    /// travel range. Used for state decisions (freeze, offset sync,
+    /// pin progress).
     public func collapse(forNormalizedOffset offset: CGFloat) -> CGFloat {
         min(max(offset, 0), headerHeight)
+    }
+
+    /// Collapse used for chrome RENDERING: negative during a pull-down
+    /// bounce, so the bar rides down together with the in-scroll header
+    /// and the content — the whole surface stretches as one unit
+    /// (matching the single-scroll legacy feel) instead of the bar
+    /// staying pinned over a growing gap.
+    public func displayCollapse(forNormalizedOffset offset: CGFloat) -> CGFloat {
+        min(offset, headerHeight)
     }
 
     public func headerOriginY(collapse: CGFloat) -> CGFloat {

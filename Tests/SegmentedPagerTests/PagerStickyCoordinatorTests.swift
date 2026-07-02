@@ -83,10 +83,27 @@ struct PagerStickyCoordinatorTests {
         #expect(h.bar.frame.origin.y == h.anchor) // clamped: fully pinned
     }
 
-    @Test func pullDownBounceKeepsChromeFullyExpanded() {
+    @Test func pullDownBounceMovesChromeDownWithTheContent() {
+        // Rubber-band stretch: the bar rides down with the in-scroll
+        // header and content as one surface (legacy single-scroll feel)
+        // instead of staying pinned over a growing gap.
         let h = makeHarness()
         h.pageA.contentOffset.y = -80
+        #expect(h.bar.frame.origin.y == h.anchor + 180) // 100 + 80 stretch
+
+        // Releasing back to rest restores the expanded chrome.
+        h.pageA.contentOffset.y = 0
         #expect(h.bar.frame.origin.y == h.anchor + 100)
+    }
+
+    @Test func freezingMidBounceClampsToExpanded() {
+        // A horizontal swipe starting mid-bounce must not freeze the
+        // chrome at a stretched position.
+        let h = makeHarness()
+        h.pageA.contentOffset.y = -80
+        h.sticky.freezeForHorizontalTransition()
+        #expect(h.bar.frame.origin.y == h.anchor + 100)
+        #expect(h.header.frame.origin.y == h.anchor)
     }
 
     @Test func pinProgressIsReportedOnChange() {

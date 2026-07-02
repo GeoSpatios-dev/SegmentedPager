@@ -68,10 +68,20 @@ public final class PagerStickyCoordinator {
 
     // MARK: - Inputs from the container
 
+    /// Clamped collapse for state decisions. Freezing mid-bounce or
+    /// settling never treats a rubber-band stretch as real travel.
     public var currentCollapse: CGFloat {
         if let frozenCollapse { return frozenCollapse }
         guard let activeScrollView else { return 0 }
         return collapse(of: activeScrollView)
+    }
+
+    /// Unclamped-below-zero collapse for chrome rendering (pull-down
+    /// moves the bar down with the stretching content).
+    private var currentDisplayCollapse: CGFloat {
+        if let frozenCollapse { return frozenCollapse }
+        guard let activeScrollView else { return 0 }
+        return math.displayCollapse(forNormalizedOffset: normalizedOffset(of: activeScrollView))
     }
 
     /// A horizontal transition (user drag or programmatic animation) is
@@ -126,7 +136,9 @@ public final class PagerStickyCoordinator {
         // ③ Chrome now follows the destination.
         frozenCollapse = nil
         observe(scrollView)
-        applyChromeFrames(collapse: self.collapse(of: scrollView))
+        applyChromeFrames(
+            collapse: math.displayCollapse(forNormalizedOffset: normalizedOffset(of: scrollView))
+        )
     }
 
     /// Container laid out (size change, safe area change): re-anchor and
@@ -134,7 +146,7 @@ public final class PagerStickyCoordinator {
     public func overlayLayoutChanged() {
         chromeTopAnchor = overlay.safeAreaInsets.top
         syncInScrollHeaderFrame()
-        applyChromeFrames(collapse: currentCollapse)
+        applyChromeFrames(collapse: currentDisplayCollapse)
     }
 
     public func setHeaderHeight(_ height: CGFloat) {
@@ -160,14 +172,14 @@ public final class PagerStickyCoordinator {
 
         onTopInsetChange?(math.totalTopInset)
         syncInScrollHeaderFrame()
-        applyChromeFrames(collapse: currentCollapse)
+        applyChromeFrames(collapse: currentDisplayCollapse)
     }
 
     public func setBarHeight(_ height: CGFloat) {
         guard abs(height - math.barHeight) > 0.5 else { return }
         math.barHeight = height
         onTopInsetChange?(math.totalTopInset)
-        applyChromeFrames(collapse: currentCollapse)
+        applyChromeFrames(collapse: currentDisplayCollapse)
     }
 
     // MARK: - Geometry
@@ -287,7 +299,11 @@ public final class PagerStickyCoordinator {
                 // adjustments; keep the in-scroll header pinned to the
                 // (possibly moved) inset top. No-op when unchanged.
                 self.syncInScrollHeaderFrame()
-                self.applyChromeFrames(collapse: self.collapse(of: scrollView))
+                self.applyChromeFrames(
+                    collapse: self.math.displayCollapse(
+                        forNormalizedOffset: self.normalizedOffset(of: scrollView)
+                    )
+                )
             }
         }
     }

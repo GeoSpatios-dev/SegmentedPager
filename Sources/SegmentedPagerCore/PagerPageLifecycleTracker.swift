@@ -145,7 +145,17 @@ public final class PagerPageLifecycleTracker {
 
     /// The non-selected page revealed by the current transition, if any.
     private func incomingPage(for progress: PageProgress) -> IncomingPage? {
-        guard progress.fraction > 0 else { return nil }
+        guard progress.fraction > 0 else {
+            // A still-active drag can momentarily rest exactly on a
+            // neighbor's boundary (fraction == 0 at a non-selected
+            // index): that neighbor is a fully revealed incoming page,
+            // not a return to rest — treating it as rest would invert
+            // appearance between the visible and hidden pages.
+            if progress.fromIndex != selectedIndex, states.indices.contains(progress.fromIndex) {
+                return IncomingPage(index: progress.fromIndex, visibleRatio: 1)
+            }
+            return nil
+        }
 
         if progress.fromIndex == selectedIndex, progress.toIndex != selectedIndex {
             return IncomingPage(index: progress.toIndex, visibleRatio: progress.fraction)

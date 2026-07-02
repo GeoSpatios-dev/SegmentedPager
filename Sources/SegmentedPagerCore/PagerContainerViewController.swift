@@ -94,6 +94,9 @@ public final class PagerContainerViewController: UIViewController {
     /// placement, size-change realignment, programmatic selection).
     private var isAdjustingOffsetInternally = false
     private var programmaticTargetIndex: Int?
+    /// Selection requested before the first layout; applied once the
+    /// tracker has started.
+    private var deferredSelectionIndex: Int?
 
     public init(
         pageCount: Int,
@@ -150,10 +153,27 @@ public final class PagerContainerViewController: UIViewController {
             isAdjustingOffsetInternally = true
             scrollView.setContentOffset(restingOffset(for: tracker.selectedIndex), animated: false)
             isAdjustingOffsetInternally = false
+
+            // The instant realign kills any in-flight programmatic
+            // animation WITHOUT its didEndScrollingAnimation callback —
+            // complete the settle here or the chrome stays frozen and
+            // the selection binding never reconciles.
+            if let target = programmaticTargetIndex {
+                programmaticTargetIndex = nil
+                stickySettle(at: target)
+                updateScrollsToTop(activeIndex: target)
+                onProgressChange?(.resting(at: target))
+                onSelectionSettled?(target)
+            }
         }
 
         sticky?.overlayLayoutChanged()
         startTrackerIfNeeded()
+
+        if let deferred = deferredSelectionIndex, !pages.isEmpty {
+            deferredSelectionIndex = nil
+            setSelectedIndex(deferred, animated: false)
+        }
     }
 
     // MARK: - Public API
@@ -164,6 +184,14 @@ public final class PagerContainerViewController: UIViewController {
               (0..<tracker.pageCount).contains(index)
         else { return }
 
+        // Before the first layout the tracker hasn't started — freezing
+        // or feeding it here would silently drop the selection and wedge
+        // the chrome. Defer to the first layout pass instead.
+        guard lastLayoutWidth > 0 else {
+            deferredSelectionIndex = index
+            return
+        }
+
         // Chrome freezes for the whole transition, exactly like a drag.
         sticky?.freezeForHorizontalTransition()
         if animated {
@@ -172,14 +200,17 @@ public final class PagerContainerViewController: UIViewController {
 
         apply(events: tracker.selectProgrammatically(index))
 
-        guard lastLayoutWidth > 0 else { return }
         if animated {
             scrollView.setContentOffset(restingOffset(for: index), animated: true)
         } else {
+            // An earlier animated transition may still be in flight —
+            // this instant jump supersedes it.
+            programmaticTargetIndex = nil
             isAdjustingOffsetInternally = true
             scrollView.setContentOffset(restingOffset(for: index), animated: false)
             isAdjustingOffsetInternally = false
             stickySettle(at: index)
+            updateScrollsToTop(activeIndex: index)
             onProgressChange?(.resting(at: index))
             onSelectionSettled?(index)
         }
@@ -200,17 +231,27 @@ public final class PagerContainerViewController: UIViewController {
             await Task.yield()
             guard let self, let scrollView else { return }
             self.sticky?.prepareIncomingPage(scrollView)
-            if index == self.tracker.selectedIndex, self.programmaticTargetIndex == nil {
-                self.sticky?.settle(on: scrollView)
-            }
+            self.settleRegisteredScrollViewIfCurrent(scrollView, at: index)
         }
 
         // The settled page's scroll view arriving late (page created
         // during this settle, probe resolved on a later layout pass)
         // completes the sticky attach here.
-        if index == tracker.selectedIndex, programmaticTargetIndex == nil {
-            sticky?.settle(on: scrollView)
-        }
+        settleRegisteredScrollViewIfCurrent(scrollView, at: index)
+    }
+
+    /// Sticky-settle from a registration path — only when the pager is
+    /// actually at rest on this page. A frozen chrome means a horizontal
+    /// transition is in flight and its own settle path (drag settle,
+    /// animation end, or the explicit stickySettle after an instant
+    /// jump) completes the attach; settling from here mid-swipe would
+    /// unfreeze and drag the header sideways with the outgoing page.
+    private func settleRegisteredScrollViewIfCurrent(_ scrollView: UIScrollView, at index: Int) {
+        guard index == tracker.selectedIndex,
+              programmaticTargetIndex == nil,
+              sticky?.isFrozen != true
+        else { return }
+        sticky?.settle(on: scrollView)
     }
 
     public func pageScrollView(at index: Int) -> UIScrollView? {

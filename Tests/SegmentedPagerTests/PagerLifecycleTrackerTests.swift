@@ -82,6 +82,19 @@ struct PagerLifecycleTrackerTests {
         #expect(events.isEmpty)
     }
 
+    @Test func dragRestingExactlyOnNeighborBoundaryKeepsItIncoming() {
+        // A still-active drag can pass through offset == pageWidth
+        // exactly (fraction 0 at the NEIGHBOR's index). That is a fully
+        // revealed incoming page — not a return to rest — and must not
+        // invert appearance between the visible and hidden pages.
+        let tracker = makeTracker()
+        _ = tracker.start()
+        _ = tracker.dragUpdated(PageProgress(fromIndex: 0, toIndex: 1, fraction: 0.6))
+        let events = tracker.dragUpdated(.resting(at: 1))
+        #expect(events.isEmpty)
+        #expect(tracker.selectedIndex == 0) // not settled yet
+    }
+
     @Test func dragReturningToRestRecoversCurrentAndCancelsIncoming() {
         let tracker = makeTracker()
         _ = tracker.start()

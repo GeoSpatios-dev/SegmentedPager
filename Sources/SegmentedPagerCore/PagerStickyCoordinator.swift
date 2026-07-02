@@ -73,6 +73,10 @@ public final class PagerStickyCoordinator {
 
     // MARK: - Inputs from the container
 
+    /// A horizontal transition is in flight (chrome frozen). Late page
+    /// registrations must not settle mid-swipe.
+    public var isFrozen: Bool { frozenCollapse != nil }
+
     /// Clamped collapse for state decisions. Freezing mid-bounce or
     /// settling never treats a rubber-band stretch as real travel.
     public var currentCollapse: CGFloat {

@@ -40,9 +40,13 @@ public final class PagerHorizontalScrollView: UIScrollView {
     }
 
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer === panGestureRecognizer,
-           touchIsInsideExclusionRegion(gestureRecognizer) {
-            return false
+        if gestureRecognizer === panGestureRecognizer {
+            if touchIsInsideExclusionRegion(gestureRecognizer) {
+                return false
+            }
+            if touchStartsInNestedHorizontalScrollable(gestureRecognizer) {
+                return false
+            }
         }
         return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
@@ -56,6 +60,30 @@ public final class PagerHorizontalScrollView: UIScrollView {
             let location = gestureRecognizer.location(in: exclusion)
             return exclusion.bounds.contains(location)
         }
+    }
+
+    /// Touches beginning inside a nested horizontally-scrollable region
+    /// (chart carousels, route-fix strips) never begin a page-switch pan,
+    /// even when the inner scroller declines the drag (at its content
+    /// edge, or bounce disabled with near-fit content). Mirrors the
+    /// legacy panel's guarantee; `pagerSwipeExclusion()` remains for
+    /// non-scroll-view regions.
+    private func touchStartsInNestedHorizontalScrollable(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let location = gestureRecognizer.location(in: self)
+        guard let hitView = hitTest(location, with: nil) else { return false }
+
+        var current: UIView? = hitView
+        while let view = current, view !== self {
+            if let scrollView = view as? UIScrollView,
+               scrollView !== self,
+               scrollView.isScrollEnabled,
+               scrollView.alwaysBounceHorizontal
+                   || scrollView.contentSize.width > scrollView.bounds.width + 1 {
+                return true
+            }
+            current = view.superview
+        }
+        return false
     }
 }
 #endif

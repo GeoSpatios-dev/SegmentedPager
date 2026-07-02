@@ -255,8 +255,12 @@ private struct PagerChromeHeaderRoot<Tab: Hashable, Header: View, Bar: View, Pag
         if let header = model.header {
             header()
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // Measure the natural content height BEFORE the frame
+                // expands to the host view's bounds — measuring outside
+                // reports max(hostBounds, content) and can only ratchet
+                // upward, since hostBounds is itself the last report.
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onHeightChange)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .environment(\.self, model.environment)
         }
     }
@@ -276,8 +280,9 @@ private struct PagerChromeBarRoot<Tab: Hashable, Header: View, Bar: View, Page: 
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Same measure-inside-the-frame rule as the header root.
             .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onHeightChange)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .environment(\.self, model.environment)
     }
 }
@@ -378,21 +383,13 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
         container.view.overrideUserInterfaceStyle =
             environment.colorScheme == .dark ? .dark : .light
 
-        if let index = tabs.firstIndex(of: selection) {
-            if let pendingIndex = context.coordinator.pendingSelectionIndex,
-               index == pendingIndex || index == context.coordinator.pendingSourceIndex {
-                return
-            }
-
-            if context.coordinator.pendingSelectionIndex != nil {
-                context.coordinator.clearPendingSelection()
-            }
-
-            guard index != container.selectedIndex else { return }
-            let currentIndex = container.selectedIndex
-            if tabs.indices.contains(currentIndex) {
-                model.selection = tabs[currentIndex]
-            }
+        // The tracker adopts the target index up front in
+        // setSelectedIndex, so an in-flight bar-tap transition reads as
+        // selectedIndex == target here and re-entrant updates no-op.
+        // A genuinely different external write (deep link, reset) lands
+        // as a redirect of the running animation instead of being
+        // swallowed.
+        if let index = tabs.firstIndex(of: selection), index != container.selectedIndex {
             container.setSelectedIndex(index, animated: true)
         }
     }
@@ -413,9 +410,12 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
             guard tabs.indices.contains(index) else { return }
             selection = tabs[index]
         }
-        model.select = { [weak coordinator] tab in
-            guard let index = tabs.firstIndex(of: tab) else { return }
-            coordinator?.requestSelection(at: index)
+        // Bar taps write the binding immediately (the host's
+        // selection-gated UI must react on tap, not at animation end);
+        // updateUIViewController turns the write into the animated
+        // transition.
+        model.select = { tab in
+            selection = tab
         }
     }
 }
@@ -428,8 +428,6 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
     weak var container: PagerContainerViewController?
     var applySelection: ((Int) -> Void)?
     var pinProgressAction: (@MainActor @Sendable (CGFloat) -> Void)?
-    var pendingSelectionIndex: Int?
-    var pendingSourceIndex: Int?
 
     init(model: PagerHostModel<Tab, Header, Bar, Page>) {
         self.model = model
@@ -467,24 +465,6 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
         return hosting
     }
 
-    func requestSelection(at index: Int) {
-        guard let container, model.tabs.indices.contains(index) else { return }
-        let currentIndex = container.selectedIndex
-        guard index != currentIndex else { return }
-
-        pendingSourceIndex = currentIndex
-        pendingSelectionIndex = index
-        if model.tabs.indices.contains(currentIndex) {
-            model.selection = model.tabs[currentIndex]
-        }
-        container.setSelectedIndex(index, animated: true)
-    }
-
-    func clearPendingSelection() {
-        pendingSourceIndex = nil
-        pendingSelectionIndex = nil
-    }
-
     func handlePageEvent(_ event: PagerPageEvent) {
         switch event {
         case .didAppear(let index):
@@ -497,7 +477,6 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
     }
 
     func selectionSettled(at index: Int) {
-        clearPendingSelection()
         if model.tabs.indices.contains(index) {
             model.selection = model.tabs[index]
         }

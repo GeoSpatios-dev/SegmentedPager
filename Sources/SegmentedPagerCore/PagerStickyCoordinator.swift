@@ -85,6 +85,25 @@ public final class PagerStickyCoordinator {
         applyChromeFrames(collapse: collapse)
     }
 
+    /// A freshly created page is about to become visible (mid-drag or
+    /// mid-animation). SwiftUI initializes the bridged scroll view's
+    /// offset without regard for the chrome, so place it at the position
+    /// the settle rule will demand — otherwise the incoming page rides
+    /// in visibly misaligned with the bar until the transition settles
+    /// (the "first visit only" glitch).
+    public func prepareIncomingPage(_ scrollView: UIScrollView) {
+        guard scrollView !== activeScrollView else { return }
+        let target = OffsetSyncRule.targetNormalizedOffset(
+            currentCollapse: currentCollapse,
+            headerHeight: math.headerHeight,
+            destinationSavedNormalizedOffset: 0
+        )
+        let actual = normalizedOffset(of: scrollView)
+        if abs(target - actual) > 0.5 {
+            scrollView.contentOffset.y += target - actual
+        }
+    }
+
     /// The pager settled on a page (§5.3 order: sync offset → reparent →
     /// observe + unfreeze). Also serves as the initial attach. Idempotent.
     public func settle(on scrollView: UIScrollView) {

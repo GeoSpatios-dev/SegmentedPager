@@ -151,6 +151,216 @@ struct PagerPinnedGeometryTests {
         )
     }
 
+    /// First switch to a lazily created page: the fresh page's content
+    /// must land below the chrome exactly like the first page's did —
+    /// SwiftUI initializes a bridged scroll view's offset without
+    /// accounting for content margins, which shows up as a chrome-sized
+    /// offset between the bar and the content on first visit.
+    @Test func firstSwitchToFreshPageAlignsContentWithChrome() {
+        let box = SelectionBox()
+        let harness = ObservedSelectionHarnessView(box: box)
+
+        let hosting = UIHostingController(rootView: harness)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = hosting
+        window.isHidden = false
+        window.layoutIfNeeded()
+
+        // Wait for the initial page + chrome to assemble.
+        var deadline = Date().addingTimeInterval(3)
+        while window.firstDescendant(of: PagerChromeOverlay.self) == nil, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+            window.layoutIfNeeded()
+        }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        // First visit to tab 1 (lazy → created now, animated transition).
+        box.value = 1
+
+        // Mid-transition sample: the fresh page must already be aligned
+        // while it is riding in — the settle correction is too late for
+        // the frames the user actually sees.
+        RunLoop.main.run(until: Date().addingTimeInterval(0.08))
+        window.layoutIfNeeded()
+        if let horizontal = window.firstDescendant(of: PagerHorizontalScrollView.self) {
+            let freshMidTransition = horizontal.allDescendants(of: UIScrollView.self).first {
+                $0.convert($0.bounds, to: horizontal).minX >= 389
+            }
+            if let fresh = freshMidTransition {
+                let normalized = fresh.contentOffset.y + fresh.adjustedContentInset.top
+                #expect(
+                    abs(normalized) < 2,
+                    "fresh page misaligned mid-transition: normalized \(normalized), offset \(fresh.contentOffset.y), inset \(fresh.adjustedContentInset.top)"
+                )
+            }
+        }
+
+        deadline = Date().addingTimeInterval(3)
+        while Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            window.layoutIfNeeded()
+            if let horizontal = window.firstDescendant(of: PagerHorizontalScrollView.self),
+               abs(horizontal.contentOffset.x - 390) < 1, !horizontal.isDecelerating {
+                break
+            }
+        }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        guard let overlay = window.firstDescendant(of: PagerChromeOverlay.self),
+              let horizontal = window.firstDescendant(of: PagerHorizontalScrollView.self),
+              let barView = overlay.subviews.last
+        else {
+            Issue.record("chrome did not assemble for the fresh-page switch")
+            return
+        }
+
+        // The fresh page is the one horizontally positioned at x == width.
+        let pageScrolls = horizontal.allDescendants(of: UIScrollView.self)
+        guard let freshScroll = pageScrolls.first(where: {
+            $0.convert($0.bounds, to: horizontal).minX >= 389
+        }) else {
+            Issue.record("fresh page scroll view not found; pages: \(pageScrolls.count)")
+            return
+        }
+
+        let normalized = freshScroll.contentOffset.y + freshScroll.adjustedContentInset.top
+        let barBottomY = barView.convert(barView.bounds, to: window).maxY
+
+        // Chrome was fully expanded before the switch → the fresh page
+        // must rest fully expanded too (normalized == 0), with its
+        // content starting right below the bar.
+        #expect(
+            abs(normalized) < 2,
+            "fresh page rests at spurious normalized offset \(normalized); offset \(freshScroll.contentOffset.y), inset \(freshScroll.adjustedContentInset.top)"
+        )
+
+        if let contentView = freshScroll.subviews.max(by: { $0.bounds.height < $1.bounds.height }) {
+            let contentTopY = contentView.convert(contentView.bounds, to: window).minY
+            #expect(
+                contentTopY >= barBottomY - 2,
+                "fresh page content (top \(contentTopY)) must start below the bar (bottom \(barBottomY))"
+            )
+        }
+    }
+
+    /// Reproduces the async-loading case: the header starts small (a
+    /// skeleton) and grows once "data" arrives. The chrome inset change
+    /// must not leave already-created pages resting at a spurious
+    /// normalized offset (content misaligned with the bar until the
+    /// user scrolls).
+    @Test func headerGrowthAfterLoadKeepsRestingPagesAligned() {
+        let box = SelectionBox()
+        let harness = GrowingHeaderHarnessView(box: box)
+
+        let hosting = UIHostingController(rootView: harness)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = hosting
+        window.isHidden = false
+        window.layoutIfNeeded()
+
+        var deadline = Date().addingTimeInterval(3)
+        while window.firstDescendant(of: PagerChromeOverlay.self) == nil, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+            window.layoutIfNeeded()
+        }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        // "Data arrives": the header grows from 40 to 160.
+        box.headerHeight = 160
+        deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            window.layoutIfNeeded()
+        }
+
+        guard let overlay = window.firstDescendant(of: PagerChromeOverlay.self),
+              let horizontal = window.firstDescendant(of: PagerHorizontalScrollView.self),
+              let pageScroll = horizontal.firstDescendant(of: UIScrollView.self),
+              let barView = overlay.subviews.last
+        else {
+            Issue.record("chrome did not assemble for the growing-header harness")
+            return
+        }
+
+        let normalized = pageScroll.contentOffset.y + pageScroll.adjustedContentInset.top
+        #expect(
+            abs(normalized) < 2,
+            "page must still rest fully expanded after header growth; normalized \(normalized), offset \(pageScroll.contentOffset.y), inset \(pageScroll.adjustedContentInset.top)"
+        )
+
+        let anchorY = overlay.convert(overlay.bounds, to: window).minY + overlay.safeAreaInsets.top
+        let barTopY = barView.convert(barView.bounds, to: window).minY
+        #expect(
+            abs(barTopY - (anchorY + 160)) < 2,
+            "bar must sit below the grown header; barTop \(barTopY), anchor \(anchorY)"
+        )
+
+        if let contentView = pageScroll.subviews.max(by: { $0.bounds.height < $1.bounds.height }) {
+            let contentTopY = contentView.convert(contentView.bounds, to: window).minY
+            let barBottomY = barView.convert(barView.bounds, to: window).maxY
+            #expect(
+                contentTopY >= barBottomY - 2,
+                "content (top \(contentTopY)) must start below the bar (bottom \(barBottomY)) after header growth"
+            )
+        }
+    }
+
+    private struct GrowingHeaderHarnessView: View {
+        let box: SelectionBox
+        @State private var selection = 0
+
+        var body: some View {
+            SegmentedPager(
+                tabs: [0, 1, 2],
+                selection: $selection,
+                title: { "Tab \($0)" },
+                header: {
+                    Color.red.frame(height: box.headerHeight)
+                },
+                page: { tab in
+                    PagerPageScroll {
+                        LazyVStack(spacing: 0) {
+                            ForEach(0..<80, id: \.self) { index in
+                                Text("Row \(tab)-\(index)")
+                                    .frame(height: 44)
+                            }
+                        }
+                    }
+                }
+            )
+            .pagerBarMode(.pinned)
+        }
+    }
+
+    private struct ObservedSelectionHarnessView: View {
+        let box: SelectionBox
+
+        var body: some View {
+            SegmentedPager(
+                tabs: [0, 1, 2],
+                selection: Binding(
+                    get: { box.value },
+                    set: { box.value = $0 }
+                ),
+                title: { "Tab \($0)" },
+                header: {
+                    Color.red.frame(height: PagerPinnedGeometryTests.headerHeight)
+                },
+                page: { tab in
+                    PagerPageScroll {
+                        LazyVStack(spacing: 0) {
+                            ForEach(0..<80, id: \.self) { index in
+                                Text("Row \(tab)-\(index)")
+                                    .frame(height: 44)
+                            }
+                        }
+                    }
+                }
+            )
+            .pagerBarMode(.pinned)
+        }
+    }
+
     @Test func pinnedChromeGeometryInBareHost() {
         guard let geometry = measure(PinnedHarnessView()) else {
             Issue.record("pinned chrome did not assemble in bare host")
@@ -173,6 +383,13 @@ struct PagerPinnedGeometryTests {
     }
 }
 
+@MainActor
+@Observable
+private final class SelectionBox {
+    var value = 0
+    var headerHeight: CGFloat = 40
+}
+
 extension UIView {
     fileprivate func firstDescendant<T: UIView>(of type: T.Type) -> T? {
         for subview in subviews {
@@ -180,6 +397,15 @@ extension UIView {
             if let match = subview.firstDescendant(of: type) { return match }
         }
         return nil
+    }
+
+    fileprivate func allDescendants<T: UIView>(of type: T.Type) -> [T] {
+        var result: [T] = []
+        for subview in subviews {
+            if let match = subview as? T { result.append(match) }
+            result.append(contentsOf: subview.allDescendants(of: type))
+        }
+        return result
     }
 }
 #endif

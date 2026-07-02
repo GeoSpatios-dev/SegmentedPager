@@ -192,6 +192,11 @@ public final class PagerContainerViewController: UIViewController {
         // Status-bar-tap scroll-to-top must have exactly one taker.
         scrollView.scrollsToTop = index == tracker.selectedIndex
 
+        // Registration happens exactly once per page, right as it is
+        // created — align the fresh page with the chrome BEFORE it
+        // becomes visible mid-transition.
+        sticky?.prepareIncomingPage(scrollView)
+
         // The settled page's scroll view arriving late (page created
         // during this settle, probe resolved on a later layout pass)
         // completes the sticky attach here.

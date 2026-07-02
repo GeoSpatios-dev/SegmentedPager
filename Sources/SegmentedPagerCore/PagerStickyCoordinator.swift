@@ -114,7 +114,7 @@ public final class PagerStickyCoordinator {
     /// re-apply chrome frames.
     public func overlayLayoutChanged() {
         chromeTopAnchor = overlay.safeAreaInsets.top
-        updateHeaderWidth()
+        syncInScrollHeaderFrame()
         applyChromeFrames(collapse: currentCollapse)
     }
 
@@ -140,7 +140,7 @@ public final class PagerStickyCoordinator {
         }
 
         onTopInsetChange?(math.totalTopInset)
-        updateHeaderWidth()
+        syncInScrollHeaderFrame()
         applyChromeFrames(collapse: currentCollapse)
     }
 
@@ -202,30 +202,37 @@ public final class PagerStickyCoordinator {
     private func moveHeader(into scrollView: UIScrollView) {
         guard let headerView else { return }
         guard headerView.superview !== scrollView else {
-            updateHeaderWidth()
+            syncInScrollHeaderFrame()
             return
         }
         assertNoFirstResponder(in: headerView)
         scrollView.addSubview(headerView)
-        // Content y = 0 is the top of the page's chrome margin, which sits
-        // at the viewport top when the page rests fully expanded.
-        headerView.frame = CGRect(
+        headerView.frame = inScrollHeaderFrame(for: scrollView)
+    }
+
+    /// The header rides at the very top of the page's chrome inset
+    /// region. SwiftUI implements `contentMargins` as content inset, so
+    /// the resting viewport top is content y == -adjustedContentInset.top
+    /// — NOT content y == 0, which is where the page content itself
+    /// starts (the two overlapping was the nested-host layout bug).
+    private func inScrollHeaderFrame(for scrollView: UIScrollView) -> CGRect {
+        CGRect(
             x: 0,
-            y: 0,
+            y: -scrollView.adjustedContentInset.top,
             width: scrollView.bounds.width,
             height: math.headerHeight
         )
     }
 
-    private func updateHeaderWidth() {
-        guard let headerView else { return }
-        if let scrollView = headerView.superview as? UIScrollView {
-            headerView.frame = CGRect(
-                x: 0,
-                y: 0,
-                width: scrollView.bounds.width,
-                height: math.headerHeight
-            )
+    /// Re-pins the in-scroll header to the inset top; the inset moves
+    /// when chrome heights or safe areas change.
+    private func syncInScrollHeaderFrame() {
+        guard let headerView,
+              let scrollView = headerView.superview as? UIScrollView
+        else { return }
+        let frame = inScrollHeaderFrame(for: scrollView)
+        if headerView.frame != frame {
+            headerView.frame = frame
         }
         // Overlay-hosted frames are owned by applyChromeFrames.
     }
@@ -257,6 +264,10 @@ public final class PagerStickyCoordinator {
                 guard let self, self.frozenCollapse == nil,
                       scrollView === self.activeScrollView
                 else { return }
+                // Content-margin/safe-area changes surface as offset
+                // adjustments; keep the in-scroll header pinned to the
+                // (possibly moved) inset top. No-op when unchanged.
+                self.syncInScrollHeaderFrame()
                 self.applyChromeFrames(collapse: self.collapse(of: scrollView))
             }
         }

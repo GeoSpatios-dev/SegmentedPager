@@ -8,6 +8,7 @@
 //      headerTop == chromeAnchor
 //      barTop    == chromeAnchor + headerHeight
 //      contentTop >= barTop + barHeight   (page content below the chrome)
+//      bar leaves the trailing scroll-indicator lane uncovered
 //
 //  A NavigationStack host gives the page's bridged scroll view a
 //  different adjusted content inset than a bare host — the bug class
@@ -24,6 +25,7 @@ import UIKit
 @MainActor
 struct PagerPinnedGeometryTests {
     private static let headerHeight: CGFloat = 120
+    private static let minimumIndicatorGutter: CGFloat = 7.5
 
     private struct PinnedHarnessView: View {
         @State private var selection = 0
@@ -59,6 +61,7 @@ struct PagerPinnedGeometryTests {
         let headerParentIsPageScroll: Bool
         let barTopY: CGFloat
         let barHeight: CGFloat
+        let barTrailingGutter: CGFloat
         let pageContentTopY: CGFloat
         let pageAdjustedTopInset: CGFloat
         let pageRestOffsetY: CGFloat
@@ -120,12 +123,16 @@ struct PagerPinnedGeometryTests {
             view.convert(view.bounds, to: window).minY
         }
 
+        let overlayFrame = overlay.convert(overlay.bounds, to: window)
+        let barFrame = barView.convert(barView.bounds, to: window)
+
         return Geometry(
-            anchorY: overlay.convert(overlay.bounds, to: window).minY + overlay.safeAreaInsets.top,
+            anchorY: overlayFrame.minY + overlay.safeAreaInsets.top,
             headerTopY: windowY(headerView),
             headerParentIsPageScroll: headerView.superview === pageScroll,
-            barTopY: windowY(barView),
+            barTopY: barFrame.minY,
             barHeight: barView.bounds.height,
+            barTrailingGutter: overlayFrame.maxX - barFrame.maxX,
             pageContentTopY: contentView.map(windowY) ?? -1,
             pageAdjustedTopInset: pageScroll.adjustedContentInset.top,
             pageRestOffsetY: pageScroll.contentOffset.y
@@ -148,6 +155,10 @@ struct PagerPinnedGeometryTests {
         #expect(
             geometry.pageContentTopY >= geometry.barTopY + geometry.barHeight - 2,
             "[\(host)] page content must start below the chrome; geometry: \(geometry)"
+        )
+        #expect(
+            geometry.barTrailingGutter >= Self.minimumIndicatorGutter,
+            "[\(host)] pinned bar must leave the native scroll indicator lane visible; geometry: \(geometry)"
         )
     }
 

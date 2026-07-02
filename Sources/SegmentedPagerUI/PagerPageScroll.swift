@@ -47,8 +47,9 @@ public struct PagerPageScroll<Content: View>: View {
         // Pinned-chrome reservation: rest offset stays 0 and scroll
         // content y=0 is the top of this margin, which is exactly the
         // geometry StickyMath expects (design doc §5.3 spike outcome).
+        // Indicators intentionally keep their native full-height track;
+        // pinned chrome leaves the trailing indicator lane uncovered.
         .contentMargins(.top, chromeTopInset, for: .scrollContent)
-        .contentMargins(.top, chromeTopInset, for: .scrollIndicators)
     }
 }
 #endif

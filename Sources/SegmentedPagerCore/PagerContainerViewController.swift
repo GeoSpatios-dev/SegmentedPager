@@ -196,6 +196,14 @@ public final class PagerContainerViewController: UIViewController {
         // created — align the fresh page with the chrome BEFORE it
         // becomes visible mid-transition.
         sticky?.prepareIncomingPage(scrollView)
+        Task { @MainActor [weak self, weak scrollView] in
+            await Task.yield()
+            guard let self, let scrollView else { return }
+            self.sticky?.prepareIncomingPage(scrollView)
+            if index == self.tracker.selectedIndex, self.programmaticTargetIndex == nil {
+                self.sticky?.settle(on: scrollView)
+            }
+        }
 
         // The settled page's scroll view arriving late (page created
         // during this settle, probe resolved on a later layout pass)

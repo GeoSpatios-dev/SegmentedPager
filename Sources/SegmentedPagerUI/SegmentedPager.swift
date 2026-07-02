@@ -71,7 +71,13 @@ public struct SegmentedPager<Tab: Hashable, Header: View, Bar: View, Page: View>
                     tabs: tabs,
                     selection: selection,
                     bar: bar,
-                    select: { tab in selection = tab }
+                    select: { tab in
+                        if let select = model.select {
+                            select(tab)
+                        } else {
+                            selection = tab
+                        }
+                    }
                 )
                     .background {
                         if let barBackground {
@@ -372,7 +378,21 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
         container.view.overrideUserInterfaceStyle =
             environment.colorScheme == .dark ? .dark : .light
 
-        if let index = tabs.firstIndex(of: selection), index != container.selectedIndex {
+        if let index = tabs.firstIndex(of: selection) {
+            if let pendingIndex = context.coordinator.pendingSelectionIndex,
+               index == pendingIndex || index == context.coordinator.pendingSourceIndex {
+                return
+            }
+
+            if context.coordinator.pendingSelectionIndex != nil {
+                context.coordinator.clearPendingSelection()
+            }
+
+            guard index != container.selectedIndex else { return }
+            let currentIndex = container.selectedIndex
+            if tabs.indices.contains(currentIndex) {
+                model.selection = tabs[currentIndex]
+            }
             container.setSelectedIndex(index, animated: true)
         }
     }
@@ -393,8 +413,9 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
             guard tabs.indices.contains(index) else { return }
             selection = tabs[index]
         }
-        model.select = { tab in
-            selection = tab
+        model.select = { [weak coordinator] tab in
+            guard let index = tabs.firstIndex(of: tab) else { return }
+            coordinator?.requestSelection(at: index)
         }
     }
 }
@@ -407,6 +428,8 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
     weak var container: PagerContainerViewController?
     var applySelection: ((Int) -> Void)?
     var pinProgressAction: (@MainActor @Sendable (CGFloat) -> Void)?
+    var pendingSelectionIndex: Int?
+    var pendingSourceIndex: Int?
 
     init(model: PagerHostModel<Tab, Header, Bar, Page>) {
         self.model = model
@@ -444,6 +467,24 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
         return hosting
     }
 
+    func requestSelection(at index: Int) {
+        guard let container, model.tabs.indices.contains(index) else { return }
+        let currentIndex = container.selectedIndex
+        guard index != currentIndex else { return }
+
+        pendingSourceIndex = currentIndex
+        pendingSelectionIndex = index
+        if model.tabs.indices.contains(currentIndex) {
+            model.selection = model.tabs[currentIndex]
+        }
+        container.setSelectedIndex(index, animated: true)
+    }
+
+    func clearPendingSelection() {
+        pendingSourceIndex = nil
+        pendingSelectionIndex = nil
+    }
+
     func handlePageEvent(_ event: PagerPageEvent) {
         switch event {
         case .didAppear(let index):
@@ -456,6 +497,10 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
     }
 
     func selectionSettled(at index: Int) {
+        clearPendingSelection()
+        if model.tabs.indices.contains(index) {
+            model.selection = model.tabs[index]
+        }
         applySelection?(index)
     }
 }

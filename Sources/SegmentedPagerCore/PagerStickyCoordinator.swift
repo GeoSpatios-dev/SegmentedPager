@@ -27,6 +27,11 @@ import UIKit
 
 @MainActor
 public final class PagerStickyCoordinator {
+    /// Native vertical scroll indicators sit on the trailing edge of the
+    /// page scroll view. Pinned chrome stays visually out of that lane so
+    /// indicators can remain full-height instead of starting below the bar.
+    static let scrollIndicatorGutter: CGFloat = 8
+
     /// Chrome heights change → the UI layer updates each page's top
     /// content margin.
     public var onTopInsetChange: ((CGFloat) -> Void)?
@@ -197,11 +202,15 @@ public final class PagerStickyCoordinator {
 
     private func applyChromeFrames(collapse: CGFloat) {
         let width = overlay.bounds.width
+        let gutter = min(Self.scrollIndicatorGutter, max(width, 0))
+        let isRightToLeft = overlay.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        let barX = isRightToLeft ? gutter : 0
+        let barWidth = max(0, width - gutter)
 
         barView.frame = CGRect(
-            x: 0,
+            x: barX,
             y: chromeTopAnchor + math.barOriginY(collapse: collapse),
-            width: width,
+            width: barWidth,
             height: math.barHeight
         )
 

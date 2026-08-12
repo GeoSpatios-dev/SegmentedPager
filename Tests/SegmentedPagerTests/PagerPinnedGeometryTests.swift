@@ -2,6 +2,8 @@
 //  PagerPinnedGeometryTests.swift
 //  SegmentedPagerTests
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Regression coverage for pinned-mode chrome geometry across hosting
 //  environments. The invariant, in window coordinates at rest:
 //
@@ -43,7 +45,7 @@ struct PagerPinnedGeometryTests {
                 page: { tab in
                     PagerPageScroll {
                         LazyVStack(spacing: 0) {
-                            ForEach(0..<80, id: \.self) { index in
+                            ForEach(0 ..< 80, id: \.self) { index in
                                 Text("Row \(tab)-\(index)")
                                     .frame(height: 44)
                             }
@@ -331,7 +333,7 @@ struct PagerPinnedGeometryTests {
                 page: { tab in
                     PagerPageScroll {
                         LazyVStack(spacing: 0) {
-                            ForEach(0..<80, id: \.self) { index in
+                            ForEach(0 ..< 80, id: \.self) { index in
                                 Text("Row \(tab)-\(index)")
                                     .frame(height: 44)
                             }
@@ -360,7 +362,7 @@ struct PagerPinnedGeometryTests {
                 page: { tab in
                     PagerPageScroll {
                         LazyVStack(spacing: 0) {
-                            ForEach(0..<80, id: \.self) { index in
+                            ForEach(0 ..< 80, id: \.self) { index in
                                 Text("Row \(tab)-\(index)")
                                     .frame(height: 44)
                             }

@@ -2,6 +2,8 @@
 //  PagerPageLifecycleTracker.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Pure state machine translating pager motion (drags, settles,
 //  programmatic selection) into per-page lifecycle events, with the same
 //  semantics as JXSegmentedListContainerView's list lifecycle:
@@ -28,9 +30,9 @@ public enum PagerPageEvent: Equatable, Sendable {
 public final class PagerPageLifecycleTracker {
     private enum AppearanceState {
         case disappeared
-        case appearing      // willAppear emitted
-        case appeared       // didAppear emitted
-        case disappearing   // willDisappear emitted
+        case appearing // willAppear emitted
+        case appeared // didAppear emitted
+        case disappearing // willDisappear emitted
     }
 
     public let pageCount: Int
@@ -45,7 +47,7 @@ public final class PagerPageLifecycleTracker {
         self.pageCount = max(pageCount, 0)
         self.selectedIndex = min(max(selectedIndex, 0), max(pageCount - 1, 0))
         self.preloadPolicy = preloadPolicy
-        self.states = Array(repeating: .disappeared, count: max(pageCount, 0))
+        states = Array(repeating: .disappeared, count: max(pageCount, 0))
     }
 
     public func isInitialized(_ index: Int) -> Bool {
@@ -188,7 +190,7 @@ public final class PagerPageLifecycleTracker {
             initializeIfNeeded(index - 1, into: &events)
             initializeIfNeeded(index + 1, into: &events)
         case .eager:
-            for page in 0..<pageCount {
+            for page in 0 ..< pageCount {
                 initializeIfNeeded(page, into: &events)
             }
         }

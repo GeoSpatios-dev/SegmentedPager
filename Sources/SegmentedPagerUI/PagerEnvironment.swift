@@ -2,6 +2,8 @@
 //  PagerEnvironment.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Environment keys carrying pager configuration from the host down to
 //  `SegmentedPager`, and page-scoped values (`pagerPageIsActive`) that
 //  the pager injects into each page's hosting controller.

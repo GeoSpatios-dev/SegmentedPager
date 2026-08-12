@@ -2,6 +2,8 @@
 //  PagerStickyCoordinatorTests.swift
 //  SegmentedPagerTests
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Headless-UIWindow tests for the sticky coordination mechanics:
 //  KVO-driven chrome frames, header reparenting across freeze/settle,
 //  OffsetSyncRule integration on settle, and dynamic chrome heights.

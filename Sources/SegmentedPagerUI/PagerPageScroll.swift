@@ -2,6 +2,8 @@
 //  PagerPageScroll.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  The vertical scroll container every page wraps its content in. Owning
 //  the ScrollView here (instead of letting pages bring their own) is the
 //  contract that lets the pager find the page's UIScrollView (probe),

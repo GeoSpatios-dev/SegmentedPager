@@ -2,6 +2,8 @@
 //  SegmentedPager.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Public SwiftUI entry point. Wraps the UIKit PagerContainerViewController
 //  and hosts each page in its own UIHostingController, so pages stay
 //  alive across tab switches (scroll positions and @State survive, .task

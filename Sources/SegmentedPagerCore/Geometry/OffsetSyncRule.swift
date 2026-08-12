@@ -2,6 +2,8 @@
 //  OffsetSyncRule.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Cross-page offset synchronization for sticky header continuity when a
 //  horizontal transition settles (design doc §5.3, the analogue of
 //  JXPagingView's listScrollViewWillResetContentOffset).

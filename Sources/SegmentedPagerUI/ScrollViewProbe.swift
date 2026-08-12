@@ -2,6 +2,8 @@
 //  ScrollViewProbe.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Bridging probes between SwiftUI page content and the UIKit core.
 //
 //  `ScrollViewProbe` sits as the first child of a `PagerPageScroll`'s

@@ -2,6 +2,8 @@
 //  StickyMath.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Pure geometry for smooth-mode sticky header coordination (design doc
 //  §5.3). The header collapse is a function of the active page's
 //  normalized offset; the chrome (header + bar) frames are functions of

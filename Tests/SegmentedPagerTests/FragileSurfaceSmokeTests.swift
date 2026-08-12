@@ -2,6 +2,8 @@
 //  FragileSurfaceSmokeTests.swift
 //  SegmentedPagerTests
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  CI smoke for the two fragile surfaces that depend on SwiftUI's
 //  private bridging behavior (design doc §5.3 / §10). Run on every
 //  iOS/Xcode major upgrade — failures here mean the OS changed the
@@ -32,7 +34,7 @@ struct FragileSurfaceSmokeTests {
         let capture = ScrollViewCapture()
         let page = PagerPageScroll {
             LazyVStack(spacing: 0) {
-                ForEach(0..<200, id: \.self) { index in
+                ForEach(0 ..< 200, id: \.self) { index in
                     Text("Row \(index)")
                         .frame(height: 44)
                 }

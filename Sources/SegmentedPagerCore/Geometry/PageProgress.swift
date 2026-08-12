@@ -2,6 +2,8 @@
 //  PageProgress.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Continuous horizontal transition progress between two adjacent pages,
 //  normalized from the paging scroll view's content offset. Drives bar
 //  indicator interpolation so the indicator tracks the finger instead of

@@ -2,6 +2,8 @@
 //  PagerBarContext.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Everything a tab bar skin needs: the tabs, the settled selection, the
 //  continuous transition progress (for finger-tracking indicator
 //  interpolation), and a select callback that routes through the pager's

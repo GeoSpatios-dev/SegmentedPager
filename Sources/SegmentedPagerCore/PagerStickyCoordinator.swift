@@ -2,6 +2,8 @@
 //  PagerStickyCoordinator.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Smooth-mode sticky coordination (design doc §5.3). Single
 //  responsibility: keep the chrome (header + bar) consistent with the
 //  active page's vertical offset, across page switches.

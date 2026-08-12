@@ -2,6 +2,8 @@
 //  PagerContainerTests.swift
 //  SegmentedPagerTests
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Headless-UIWindow tests for the UIKit container: lazy page creation,
 //  containment correctness, programmatic selection, and page alignment
 //  through size changes. Simulator-only (gated on UIKit).

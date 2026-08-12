@@ -2,6 +2,8 @@
 //  PagerLifecycleTrackerTests.swift
 //  SegmentedPagerTests
 //
+//  Created by yousanflics on 7/1/26.
+//
 
 import CoreGraphics
 import SegmentedPagerCore

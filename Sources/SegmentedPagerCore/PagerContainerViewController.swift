@@ -2,6 +2,8 @@
 //  PagerContainerViewController.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Container view controller owning the horizontal paging scroll view
 //  and page view controllers via standard containment (addChild /
 //  didMove), so pages that need real appearance callbacks (PDF viewers
@@ -59,6 +61,7 @@ public final class PagerContainerViewController: UIViewController {
     public var onTopInsetChange: ((CGFloat) -> Void)? {
         didSet { sticky?.onTopInsetChange = onTopInsetChange }
     }
+
     /// Header pin progress (0 expanded … 1 pinned), pinned mode only.
     public var onPinProgressChange: ((CGFloat) -> Void)? {
         didSet { sticky?.onPinProgressChange = onPinProgressChange }
@@ -105,7 +108,7 @@ public final class PagerContainerViewController: UIViewController {
         dataSource: PagerPageProviding,
         chrome: PagerChrome? = nil
     ) {
-        self.tracker = PagerPageLifecycleTracker(
+        tracker = PagerPageLifecycleTracker(
             pageCount: pageCount,
             selectedIndex: initialIndex,
             preloadPolicy: preloadPolicy
@@ -120,14 +123,14 @@ public final class PagerContainerViewController: UIViewController {
         fatalError("init(coder:) is not supported")
     }
 
-    public override func viewDidLoad() {
+    override public func viewDidLoad() {
         super.viewDidLoad()
         scrollView.delegate = self
         view.addSubview(scrollView)
         installChromeIfNeeded()
     }
 
-    public override func viewDidLayoutSubviews() {
+    override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
 
         scrollView.frame = view.bounds
@@ -181,7 +184,7 @@ public final class PagerContainerViewController: UIViewController {
     /// Programmatic selection (bar tap, external binding write).
     public func setSelectedIndex(_ index: Int, animated: Bool) {
         guard index != tracker.selectedIndex,
-              (0..<tracker.pageCount).contains(index)
+              (0 ..< tracker.pageCount).contains(index)
         else { return }
 
         // Before the first layout the tracker hasn't started — freezing
@@ -230,8 +233,8 @@ public final class PagerContainerViewController: UIViewController {
         Task { @MainActor [weak self, weak scrollView] in
             await Task.yield()
             guard let self, let scrollView else { return }
-            self.sticky?.prepareIncomingPage(scrollView)
-            self.settleRegisteredScrollViewIfCurrent(scrollView, at: index)
+            sticky?.prepareIncomingPage(scrollView)
+            settleRegisteredScrollViewIfCurrent(scrollView, at: index)
         }
 
         // The settled page's scroll view arriving late (page created

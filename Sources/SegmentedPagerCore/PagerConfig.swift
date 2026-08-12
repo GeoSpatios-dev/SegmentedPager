@@ -2,6 +2,8 @@
 //  PagerConfig.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Public configuration surface shared by Core and the SwiftUI adapter.
 //
 

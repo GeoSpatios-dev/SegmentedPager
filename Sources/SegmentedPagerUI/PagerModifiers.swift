@@ -2,6 +2,8 @@
 //  PagerModifiers.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Public configuration modifiers (environment-carried, apply them to a
 //  `SegmentedPager` or any ancestor) and the page lifecycle modifiers
 //  (apply them inside page content).
@@ -32,7 +34,7 @@ extension View {
 
     /// Opaque background behind the bar row, e.g. to keep half-sheet
     /// content from showing through a translucent chrome.
-    public func pagerBarBackground<S: ShapeStyle>(_ style: S) -> some View {
+    public func pagerBarBackground(_ style: some ShapeStyle) -> some View {
         environment(\.pagerBarBackground, AnyShapeStyle(style))
     }
 

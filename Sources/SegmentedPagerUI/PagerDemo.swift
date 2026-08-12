@@ -2,6 +2,8 @@
 //  PagerDemo.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  In-package demo doubling as the M1 spike page (design doc §12): one
 //  heavy LazyVStack page, one page with nested horizontal scrollers
 //  (plus a swipe-exclusion region), one long-text page, and one page
@@ -63,7 +65,7 @@ private struct PagerDemoView: View {
     /// ScrollView and scroll-position retention across switches.
     private static var feedPage: some View {
         LazyVStack(alignment: .leading, spacing: 8) {
-            ForEach(0..<400, id: \.self) { index in
+            ForEach(0 ..< 400, id: \.self) { index in
                 Text("Row \(index)")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -88,7 +90,7 @@ private struct PagerDemoView: View {
             horizontalCards(prefix: "B")
                 .pagerSwipeExclusion()
 
-            ForEach(0..<20, id: \.self) { index in
+            ForEach(0 ..< 20, id: \.self) { index in
                 Text("Vertical filler \(index)")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -102,7 +104,7 @@ private struct PagerDemoView: View {
     private static func horizontalCards(prefix: String) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(0..<12, id: \.self) { index in
+                ForEach(0 ..< 12, id: \.self) { index in
                     Text("\(prefix)\(index)")
                         .font(.title2.weight(.bold))
                         .frame(width: 140, height: 90)

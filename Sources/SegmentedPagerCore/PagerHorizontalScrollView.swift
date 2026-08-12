@@ -2,6 +2,8 @@
 //  PagerHorizontalScrollView.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  The horizontal paging container. All gesture arbitration against the
 //  vertically scrolling pages is native UIKit nested-scroll behavior;
 //  this subclass only adds opt-out regions (`pagerSwipeExclusion`) where
@@ -18,7 +20,7 @@ public final class PagerHorizontalScrollView: UIScrollView {
     /// deallocated view simply stops excluding.
     private let exclusionViews = NSHashTable<UIView>.weakObjects()
 
-    public override init(frame: CGRect) {
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         isPagingEnabled = true
         isDirectionalLockEnabled = true
@@ -39,7 +41,7 @@ public final class PagerHorizontalScrollView: UIScrollView {
         exclusionViews.add(view)
     }
 
-    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === panGestureRecognizer {
             if touchIsInsideExclusionRegion(gestureRecognizer) {
                 return false

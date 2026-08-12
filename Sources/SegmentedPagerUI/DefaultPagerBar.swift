@@ -2,6 +2,8 @@
 //  DefaultPagerBar.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Plain built-in bar skin: equal-width titles with an underline
 //  indicator interpolated from the continuous transition progress, so it
 //  tracks the finger during swipes. Apps are expected to inject their

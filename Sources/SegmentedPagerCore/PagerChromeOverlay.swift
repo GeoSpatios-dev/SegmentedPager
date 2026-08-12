@@ -2,6 +2,8 @@
 //  PagerChromeOverlay.swift
 //  SegmentedPager
 //
+//  Created by yousanflics on 7/1/26.
+//
 //  Full-bleed overlay above the horizontal paging scroll view hosting
 //  the pinned chrome: the bar always, the header only while a
 //  horizontal transition is in flight (design doc §5.3 — during
@@ -17,7 +19,7 @@ import UIKit
 
 @MainActor
 public final class PagerChromeOverlay: UIView {
-    public override init(frame: CGRect) {
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         // Collapsed chrome slides above the container's top edge and
         // must clip there, not float over host content.
@@ -29,7 +31,7 @@ public final class PagerChromeOverlay: UIView {
         fatalError("init(coder:) is not supported")
     }
 
-    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let view = super.hitTest(point, with: event)
         return view === self ? nil : view
     }

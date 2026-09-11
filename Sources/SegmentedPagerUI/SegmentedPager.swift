@@ -17,7 +17,7 @@
 //              active page (it is reparented INTO the page's scroll view
 //              while scrolling vertically) and the bar pins at the top.
 //
-//  Environment bridging (§6.5): pages, header and bar live in separate
+//  Environment bridging: pages, header and bar live in separate
 //  hosting controllers, so SwiftUI Environment does NOT flow into them
 //  automatically. The pager captures the full `EnvironmentValues` at its
 //  own position in the hierarchy and re-injects it into every hosted

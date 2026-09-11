@@ -4,10 +4,9 @@
 //
 //  Created by yousanflics on 7/1/26.
 //
-//  Pure geometry for smooth-mode sticky header coordination (design doc
-//  §5.3). The header collapse is a function of the active page's
-//  normalized offset; the chrome (header + bar) frames are functions of
-//  the collapse. Wired up in M2; the math lands in M0 with full tests.
+//  Pure geometry for smooth-mode sticky header coordination. Header
+//  collapse is a function of the active page's normalized offset; the
+//  chrome (header + bar) frames are functions of that collapse.
 //
 //  Model:
 //    topInset      = headerHeight + barHeight   (each page's top content inset)

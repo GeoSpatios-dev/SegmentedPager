@@ -6,9 +6,9 @@
 //
 //  Full-bleed overlay above the horizontal paging scroll view hosting
 //  the pinned chrome: the bar always, the header only while a
-//  horizontal transition is in flight (design doc §5.3 — during
-//  vertical scrolling the header lives inside the active page's scroll
-//  view so drags on it are drags on the list).
+//  horizontal transition is in flight. During vertical scrolling the
+//  header lives inside the active page's scroll view so dragging the
+//  header also scrolls the list.
 //
 //  Touch policy: only touches that land on hosted chrome subviews are
 //  claimed; everything else falls through to the pages underneath.

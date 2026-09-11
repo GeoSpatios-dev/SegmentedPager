@@ -14,9 +14,8 @@ import SegmentedPagerCore
 import SwiftUI
 
 extension View {
-    /// `.pinned`: header scrolls away and the bar pins (M2).
+    /// `.pinned`: header scrolls away and the bar pins.
     /// `.fixed`: bar always fixed above the pages.
-    /// M1 renders both as `.fixed`; the API is stable either way.
     public func pagerBarMode(_ mode: PagerBarMode) -> some View {
         environment(\.pagerBarMode, mode)
     }

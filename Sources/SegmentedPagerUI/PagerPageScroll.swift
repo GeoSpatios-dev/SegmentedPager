@@ -7,7 +7,7 @@
 //  The vertical scroll container every page wraps its content in. Owning
 //  the ScrollView here (instead of letting pages bring their own) is the
 //  contract that lets the pager find the page's UIScrollView (probe),
-//  manage scrollsToTop uniqueness, and — from M2 — drive sticky header
+//  manage scrollsToTop uniqueness, and drive sticky header
 //  coordination and top insets.
 //
 //  Pages that skip this wrapper simply render as static, non-scrolling
@@ -48,7 +48,7 @@ public struct PagerPageScroll<Content: View>: View {
         }
         // Pinned-chrome reservation: rest offset stays 0 and scroll
         // content y=0 is the top of this margin, which is exactly the
-        // geometry StickyMath expects (design doc §5.3 spike outcome).
+        // geometry StickyMath expects.
         // Indicators intentionally keep their native full-height track;
         // pinned chrome leaves the trailing indicator lane uncovered.
         .contentMargins(.top, chromeTopInset, for: .scrollContent)

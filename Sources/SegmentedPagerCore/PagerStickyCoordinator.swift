@@ -4,7 +4,7 @@
 //
 //  Created by yousanflics on 7/1/26.
 //
-//  Smooth-mode sticky coordination (design doc §5.3). Single
+//  Smooth-mode sticky coordination. Single
 //  responsibility: keep the chrome (header + bar) consistent with the
 //  active page's vertical offset, across page switches.
 //
@@ -18,7 +18,7 @@
 //    forwarding) and it scrolls away without per-frame driving. During
 //    horizontal transitions it moves to the overlay, frozen at the
 //    transition's starting collapse.
-//  - Settle order (§5.3): ① sync the destination's offset via
+//  - Settle order: ① sync the destination's offset via
 //    OffsetSyncRule → ② reparent the header into the destination →
 //    ③ switch KVO to the destination and unfreeze. All in one runloop
 //    so the unfreeze frame shows exactly the frozen collapse.
@@ -125,7 +125,7 @@ public final class PagerStickyCoordinator {
         }
     }
 
-    /// The pager settled on a page (§5.3 order: sync offset → reparent →
+    /// The pager settled on a page (sync offset → reparent →
     /// observe + unfreeze). Also serves as the initial attach. Idempotent.
     public func settle(on scrollView: UIScrollView) {
         let collapse = currentCollapse
@@ -283,7 +283,7 @@ public final class PagerStickyCoordinator {
         // Overlay-hosted frames are owned by applyChromeFrames.
     }
 
-    /// §5.3 contract: no text input inside the header — reparenting would
+    /// Header constraint: no text input inside the header — reparenting would
     /// tear down first responder mid-scroll.
     private func assertNoFirstResponder(in view: UIView) {
         #if DEBUG

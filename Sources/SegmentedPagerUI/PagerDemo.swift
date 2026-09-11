@@ -4,7 +4,7 @@
 //
 //  Created by yousanflics on 7/1/26.
 //
-//  In-package demo doubling as the M1 spike page (design doc §12): one
+//  In-package demo for paging, gesture handling, and state retention: one
 //  heavy LazyVStack page, one page with nested horizontal scrollers
 //  (plus a swipe-exclusion region), one long-text page, and one page
 //  that visibly proves keep-alive semantics (.task runs once, @State and
@@ -167,7 +167,7 @@ private struct StateDemoPage: View {
 
 // MARK: - Pinned (sticky header) demo
 
-/// M2 spike surface: interactive header (tap vs drag coexistence),
+/// Sticky-header demo: interactive header (tap vs drag coexistence),
 /// dynamic header height, pin-progress readout, and deep/shallow page
 /// combinations to exercise every OffsetSyncRule quadrant by hand.
 private struct PinnedPagerDemoView: View {

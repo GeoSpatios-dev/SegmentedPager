@@ -4,7 +4,7 @@
 //
 //  Created by yousanflics on 7/1/26.
 //
-//  Four quadrants of the settle rule (design doc §5.3):
+//  Four quadrants of the settle rule:
 //  (header pinned / not pinned) × (destination saved deep / shallow).
 //
 

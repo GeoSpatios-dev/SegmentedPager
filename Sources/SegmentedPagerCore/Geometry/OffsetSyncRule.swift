@@ -5,13 +5,11 @@
 //  Created by yousanflics on 7/1/26.
 //
 //  Cross-page offset synchronization for sticky header continuity when a
-//  horizontal transition settles (design doc §5.3, the analogue of
-//  JXPagingView's listScrollViewWillResetContentOffset).
+//  horizontal transition settles.
 //
 //  - Header not pinned: every "shallow" page shares the current collapse
 //    depth so the header never jumps. The destination's own shallow
-//    offset is intentionally overwritten (industry convention; see the
-//    acceptance wording in §9.2).
+//    offset is overwritten to preserve the shared header position.
 //  - Header pinned: the destination keeps its own deep position; a
 //    shallow destination is clamped to the pin point so the header does
 //    not pop back open on landing.

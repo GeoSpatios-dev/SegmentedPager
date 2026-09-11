@@ -5,8 +5,7 @@
 //  Created by yousanflics on 7/1/26.
 //
 //  Asserts that SwiftUI Environment values set on the host hierarchy
-//  cross the UIHostingController boundary into page content (design doc
-//  §6.5) — the classic failure mode of hosted-page architectures.
+//  cross the UIHostingController boundary into page content.
 //
 
 #if canImport(UIKit)

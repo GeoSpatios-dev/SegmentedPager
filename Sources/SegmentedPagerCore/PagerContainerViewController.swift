@@ -13,9 +13,9 @@
 //  PagerPageLifecycleTracker), progress reporting for bar indicator
 //  interpolation, programmatic selection, page realignment on size
 //  changes, and — in pinned mode — chrome hosting plus sticky
-//  coordination timing (freeze on horizontal transitions, settle in
-//  §5.3 order). Tab semantics live in the SwiftUI layer; Core is
-//  Int-indexed (design doc §6.4).
+//  coordination timing (freeze during horizontal transitions, synchronize
+//  the destination offset, then attach the header and resume observation).
+//  Tab semantics live in the SwiftUI layer; Core uses integer page indices.
 //
 
 #if canImport(UIKit)
@@ -333,8 +333,8 @@ public final class PagerContainerViewController: UIViewController {
     private func installPage(at index: Int) {
         guard pages[index] == nil, let dataSource else { return }
 
-        // Instruments-visible page creation cost (design doc §9.1: heavy
-        // pages must stay under budget and never build mid-drag).
+        // Expose page creation cost to Instruments to identify expensive
+        // content construction during paging.
         let signpostState = pageInitSignposter.beginInterval("PageInit", id: pageInitSignposter.makeSignpostID())
         defer { pageInitSignposter.endInterval("PageInit", signpostState) }
 
@@ -357,7 +357,7 @@ public final class PagerContainerViewController: UIViewController {
         page.view.layoutIfNeeded()
     }
 
-    /// §5.3 settle: runs before appearance callbacks reach SwiftUI so the
+    /// Page settling: runs before appearance callbacks reach SwiftUI so the
     /// unfreeze frame is consistent. Safe no-op when the page's scroll
     /// view has not registered yet — registration completes it.
     private func stickySettle(at index: Int) {

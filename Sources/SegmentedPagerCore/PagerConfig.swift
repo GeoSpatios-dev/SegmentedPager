@@ -12,7 +12,7 @@ import CoreGraphics
 /// How the tab bar relates to the vertically scrolling content.
 public enum PagerBarMode: Equatable, Sendable {
     /// Header scrolls away with the content, bar pins at the top once it
-    /// reaches it (full sticky coordination — wired up in M2).
+    /// reaches it.
     case pinned
     /// Bar is always fixed above the pages; the degenerate
     /// `headerHeight == 0` case of the same coordination.

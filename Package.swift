@@ -3,10 +3,11 @@
 //  Package.swift
 //  SegmentedPager
 //
-//  Local Swift Package hosting the segmented paging component described
-//  in Doc/SegmentedPager_Design.md: a JXSegmentedView-style pager with
-//  per-page scroll retention, native UIKit gesture arbitration, explicit
-//  page lifecycle, and (from M2) smooth sticky-header coordination.
+//  Created by yousanflics.
+//
+//  Local Swift package for segmented paging with per-page scroll retention,
+//  native UIKit gesture arbitration, explicit page lifecycle, and smooth
+//  sticky-header coordination.
 //
 //  - SegmentedPagerCore: UIKit container + pure geometry/state machines.
 //    No SwiftUI import. UIKit-dependent files are gated behind

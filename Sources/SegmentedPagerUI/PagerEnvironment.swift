@@ -50,7 +50,10 @@ extension EnvironmentValues {
         set { self[PagerBarModeKey.self] = newValue }
     }
 
-    var pagerPreloadPolicy: PagerPreloadPolicy {
+    /// Public (as `.pagerPreloadPolicy(_:)` already writes it) so hosts can
+    /// inspect the policy a page tree resolves to; ViewInspector needs the
+    /// writable key path.
+    public var pagerPreloadPolicy: PagerPreloadPolicy {
         get { self[PagerPreloadPolicyKey.self] }
         set { self[PagerPreloadPolicyKey.self] = newValue }
     }

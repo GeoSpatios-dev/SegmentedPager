@@ -164,6 +164,42 @@ struct PagerLifecycleTrackerTests {
         #expect(tracker.isInitialized(2))
     }
 
+    @Test func neighborPreloadingMovesAllAdjacentPageCreationOutOfDragTicks() {
+        // Five pages match Airport Detail. Compare the old lazy path against
+        // preloading through a full forward/backward visit, including a
+        // canceled swipe before the first settle.
+        for policy in [PagerPreloadPolicy.default, .neighbors] {
+            let tracker = makeTracker(pageCount: 5, policy: policy)
+            _ = tracker.start()
+            var initializedDuringDrag: [Int] = []
+            let destinations = [1, 2, 3, 4, 3, 2, 1, 0]
+
+            for destination in destinations {
+                let origin = tracker.selectedIndex
+                for fraction in [CGFloat(0.1), 0.5, 0.9] {
+                    let events = tracker.dragUpdated(PageProgress(
+                        fromIndex: min(origin, destination),
+                        toIndex: max(origin, destination),
+                        fraction: origin < destination ? fraction : 1 - fraction
+                    ))
+                    for case .initialize(let index) in events {
+                        initializedDuringDrag.append(index)
+                    }
+                }
+                if origin == 0, destination == 1 {
+                    _ = tracker.dragUpdated(.resting(at: origin))
+                    #expect(tracker.selectedIndex == origin)
+                    _ = tracker.dragUpdated(PageProgress(fromIndex: 0, toIndex: 1, fraction: 0.9))
+                }
+                _ = tracker.settle(at: destination)
+                #expect(tracker.selectedIndex == destination)
+            }
+
+            #expect(initializedDuringDrag == (policy == .neighbors ? [] : [1, 2, 3, 4]))
+            #expect(tracker.selectedIndex == 0)
+        }
+    }
+
     // MARK: - selectProgrammatically()
 
     @Test func programmaticSelectionEmitsFullLifecycleUpFront() {

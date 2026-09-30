@@ -20,7 +20,7 @@ import PackageDescription
 
 let package = Package(
     name: "SegmentedPager",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v18), .macOS(.v15)],
     products: [
         .library(name: "SegmentedPagerCore", targets: ["SegmentedPagerCore"]),
         .library(name: "SegmentedPagerUI", targets: ["SegmentedPagerUI"]),

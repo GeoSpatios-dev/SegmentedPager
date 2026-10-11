@@ -24,8 +24,15 @@
 //  root (with pager-scoped keys layered on top).
 //
 //  Body invalidation is deliberately decoupled: per-frame progress ticks
-//  flow through the observable host model and re-evaluate only the bar
-//  host, never the pager body or the page roots.
+//  flow through the observable host model and re-evaluate only the views
+//  that read `PagerBarContext.progress`, never the pager body or the page
+//  roots. With `.pagerContentKey`, a re-run of the pager body (a selection
+//  write, a store update the pages observe themselves) refreshes the
+//  closures and the bridged environment without notifying the hosted
+//  roots; only `tabs`, `selection`, the key and a change of the
+//  environment's observable traits do. Without a key every update still
+//  re-evaluates the roots, since a closure may have captured a changed
+//  input the pager cannot see.
 //
 
 #if canImport(UIKit)
@@ -47,6 +54,7 @@ public struct SegmentedPager<Tab: Hashable, Header: View, Bar: View, Page: View>
     @Environment(\.pagerSwipeEnabled) private var isSwipeEnabled
     @Environment(\.pagerBarBackground) private var barBackground
     @Environment(\.pagerPinProgressAction) private var pinProgressAction
+    @Environment(\.pagerContentKey) private var contentKey
 
     public init(
         tabs: [Tab],
@@ -108,6 +116,7 @@ public struct SegmentedPager<Tab: Hashable, Header: View, Bar: View, Page: View>
             preloadPolicy: preloadPolicy,
             isSwipeEnabled: isSwipeEnabled,
             barBackground: barBackground,
+            contentKey: contentKey,
             usesChrome: usesChrome,
             pinProgressAction: pinProgressAction
         )
@@ -172,23 +181,86 @@ extension SegmentedPager where Header == EmptyView, Bar == DefaultPagerBar<Tab> 
 
 /// Observable state shared between the SwiftUI shell and every hosted
 /// root (pages, header, bar). Fine-grained observation keeps
-/// invalidation scoped: the bar host reads `progress`/`selection`; page
-/// roots read `tabs`, `page`, `environment` and `chromeTopInset`.
+/// invalidation scoped: the bar host reads `tabs`/`selection`, the
+/// indicator reads `progress`; page roots read `tabs`, `chromeTopInset`
+/// and `contentVersion`.
+///
+/// The closures, the bridged environment and the bar background are
+/// deliberately NOT observed. None of them is comparable, so observing
+/// them meant every `updateUIViewController` (every selection write,
+/// every store update the host re-ran for) re-evaluated and laid out all
+/// live page hosting controllers plus the chrome: five to seven
+/// `UIHostingController` passes per tab tap in the airport detail. They
+/// are refreshed on every push; `contentVersion` decides when the roots
+/// re-evaluate (see `update(environment:contentKey:)`).
 @MainActor
 @Observable
 final class PagerHostModel<Tab: Hashable, Header: View, Bar: View, Page: View> {
     var tabs: [Tab] = []
     var selection: Tab?
-    var page: ((Tab) -> Page)?
-    var header: (() -> Header)?
-    var bar: ((PagerBarContext<Tab>) -> Bar)?
-    var environment = EnvironmentValues()
     var progress = PageProgress.resting(at: 0)
     var chromeTopInset: CGFloat = 0
-    var barBackground: AnyShapeStyle?
+    /// Bumped on every push unless the host supplies a content key, and
+    /// with one only when that key or the bridged environment's observable
+    /// traits (colour scheme, dynamic type, size classes, locale,
+    /// accessibility settings, …) change. Every hosted root reads it.
+    private(set) var contentVersion = 0
 
+    @ObservationIgnored var page: ((Tab) -> Page)?
+    @ObservationIgnored var header: (() -> Header)?
+    @ObservationIgnored var bar: ((PagerBarContext<Tab>) -> Bar)?
+    @ObservationIgnored private(set) var environment = EnvironmentValues()
+    @ObservationIgnored var barBackground: AnyShapeStyle?
+    @ObservationIgnored private var environmentSignature: PagerEnvironmentSignature?
+    @ObservationIgnored private var contentKey: AnyHashable?
     @ObservationIgnored var handles: [Int: PagerPageHandle] = [:]
     @ObservationIgnored var select: ((Tab) -> Void)?
+
+    // Shadow copies for the push path. `updateUIViewController` runs under
+    // SwiftUI's access tracking, so READING an observable property there
+    // (even to compare it) subscribes the host hierarchy to it, and the
+    // write that follows re-runs the host, which pushes again: an infinite
+    // layout loop. The push path only ever writes observable state and
+    // compares against these.
+    @ObservationIgnored private var pushedTabs: [Tab] = []
+    @ObservationIgnored private var pushedSelection: Tab?
+    @ObservationIgnored private var pushedVersion = 0
+
+    func push(tabs: [Tab], selection: Tab) {
+        if pushedTabs != tabs {
+            pushedTabs = tabs
+            self.tabs = tabs
+        }
+        if pushedSelection != selection {
+            pushedSelection = selection
+            self.selection = selection
+        }
+    }
+
+    func settle(selectionAt index: Int) {
+        guard pushedTabs.indices.contains(index) else { return }
+        let settled = pushedTabs[index]
+        guard pushedSelection != settled else { return }
+        pushedSelection = settled
+        selection = settled
+    }
+
+    /// Without a key the pager cannot tell whether a closure captured a
+    /// changed input, so every push re-evaluates the roots as it always
+    /// did. With a key the host vouches that its pages observe their own
+    /// inputs, and the roots re-evaluate only when the key or an
+    /// observable environment trait changes.
+    func update(environment: EnvironmentValues, contentKey: AnyHashable?) {
+        self.environment = environment
+        let signature = PagerEnvironmentSignature(environment)
+        let environmentChanged = signature != environmentSignature
+        environmentSignature = signature
+        let keyChanged = contentKey != self.contentKey
+        self.contentKey = contentKey
+        guard contentKey == nil || keyChanged || environmentChanged else { return }
+        pushedVersion &+= 1
+        contentVersion = pushedVersion
+    }
 
     func pageContent(at index: Int) -> Page? {
         guard tabs.indices.contains(index), let page else { return nil }
@@ -201,18 +273,68 @@ final class PagerHostModel<Tab: Hashable, Header: View, Bar: View, Page: View> {
         return PagerBarContext(
             tabs: tabs,
             selection: selection,
-            progress: progress,
+            progressProvider: { [weak self] in self?.progress ?? .resting(at: 0) },
             select: { tab in select?(tab) }
         )
+    }
+}
+
+/// The environment traits whose change must re-evaluate the hosted
+/// roots. `EnvironmentValues` itself is not comparable; this is the
+/// comparable projection the host model keys `contentVersion` on.
+struct PagerEnvironmentSignature: Equatable {
+    let colorScheme: ColorScheme
+    let colorSchemeContrast: ColorSchemeContrast
+    let dynamicTypeSize: DynamicTypeSize
+    let horizontalSizeClass: UserInterfaceSizeClass?
+    let verticalSizeClass: UserInterfaceSizeClass?
+    let layoutDirection: LayoutDirection
+    let locale: Locale
+    let calendar: Calendar
+    let timeZone: TimeZone
+    let isEnabled: Bool
+    let controlSize: ControlSize
+    let displayScale: CGFloat
+    let legibilityWeight: LegibilityWeight?
+    let accessibilityReduceMotion: Bool
+    let accessibilityReduceTransparency: Bool
+    let accessibilityDifferentiateWithoutColor: Bool
+    let accessibilityInvertColors: Bool
+    let accessibilityEnabled: Bool
+    let redactionReasons: RedactionReasons
+    let isLuminanceReduced: Bool
+    let scenePhase: ScenePhase
+
+    init(_ environment: EnvironmentValues) {
+        colorScheme = environment.colorScheme
+        colorSchemeContrast = environment.colorSchemeContrast
+        dynamicTypeSize = environment.dynamicTypeSize
+        horizontalSizeClass = environment.horizontalSizeClass
+        verticalSizeClass = environment.verticalSizeClass
+        layoutDirection = environment.layoutDirection
+        locale = environment.locale
+        calendar = environment.calendar
+        timeZone = environment.timeZone
+        isEnabled = environment.isEnabled
+        controlSize = environment.controlSize
+        displayScale = environment.displayScale
+        legibilityWeight = environment.legibilityWeight
+        accessibilityReduceMotion = environment.accessibilityReduceMotion
+        accessibilityReduceTransparency = environment.accessibilityReduceTransparency
+        accessibilityDifferentiateWithoutColor = environment.accessibilityDifferentiateWithoutColor
+        accessibilityInvertColors = environment.accessibilityInvertColors
+        accessibilityEnabled = environment.accessibilityEnabled
+        redactionReasons = environment.redactionReasons
+        isLuminanceReduced = environment.isLuminanceReduced
+        scenePhase = environment.scenePhase
     }
 }
 
 // MARK: - Bar hosts
 
 /// Fixed mode: tabs/selection/bar come straight from the pager body (so
-/// the bar renders on the very first frame); only the per-frame
-/// `progress` is read from the model, isolating drag-tick invalidation
-/// to this small subtree.
+/// the bar renders on the very first frame); the per-frame `progress` is
+/// read from the model lazily, by whichever bar subview reads it.
 struct PagerFixedBarHost<Tab: Hashable, Header: View, Bar: View, Page: View>: View {
     let model: PagerHostModel<Tab, Header, Bar, Page>
     let tabs: [Tab]
@@ -225,7 +347,7 @@ struct PagerFixedBarHost<Tab: Hashable, Header: View, Bar: View, Page: View>: Vi
             PagerBarContext(
                 tabs: tabs,
                 selection: selection,
-                progress: model.progress,
+                progressProvider: { [model] in model.progress },
                 select: select
             )
         )
@@ -254,6 +376,8 @@ private struct PagerChromeHeaderRoot<Tab: Hashable, Header: View, Bar: View, Pag
     let onHeightChange: @MainActor @Sendable (CGFloat) -> Void
 
     var body: some View {
+        // swiftlint:disable:next redundant_discardable_let
+        let _ = model.contentVersion
         if let header = model.header {
             header()
                 .fixedSize(horizontal: false, vertical: true)
@@ -273,6 +397,8 @@ private struct PagerChromeBarRoot<Tab: Hashable, Header: View, Bar: View, Page: 
     let onHeightChange: @MainActor @Sendable (CGFloat) -> Void
 
     var body: some View {
+        // swiftlint:disable:next redundant_discardable_let
+        let _ = model.contentVersion
         PagerBarHost(model: model)
             .background {
                 if let barBackground = model.barBackground {
@@ -300,6 +426,8 @@ private struct PagerPageRoot<Tab: Hashable, Header: View, Bar: View, Page: View>
     let registrar: PagerScrollViewRegistrar
 
     var body: some View {
+        // swiftlint:disable:next redundant_discardable_let
+        let _ = model.contentVersion
         if let content = model.pageContent(at: index) {
             content
                 .environment(\.pagerPageIsActive, handle.isActive)
@@ -326,6 +454,7 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
     let preloadPolicy: PagerPreloadPolicy
     let isSwipeEnabled: Bool
     let barBackground: AnyShapeStyle?
+    let contentKey: AnyHashable?
     let usesChrome: Bool
     let pinProgressAction: (@MainActor @Sendable (CGFloat) -> Void)?
 
@@ -397,13 +526,15 @@ private struct PagerRepresentable<Tab: Hashable, Header: View, Bar: View, Page: 
     }
 
     private func pushState(to coordinator: PagerCoordinator<Tab, Header, Bar, Page>) {
-        model.tabs = tabs
-        model.selection = selection
+        // Observable fields only when they actually changed: `@Observable`
+        // notifies on every write, and an equal write here reached every
+        // bar and page root.
+        model.push(tabs: tabs, selection: selection)
         model.page = page
         model.header = header
         model.bar = bar
-        model.environment = environment
         model.barBackground = barBackground
+        model.update(environment: environment, contentKey: contentKey)
 
         coordinator.pinProgressAction = pinProgressAction
 
@@ -479,9 +610,7 @@ final class PagerCoordinator<Tab: Hashable, Header: View, Bar: View, Page: View>
     }
 
     func selectionSettled(at index: Int) {
-        if model.tabs.indices.contains(index) {
-            model.selection = model.tabs[index]
-        }
+        model.settle(selectionAt: index)
         applySelection?(index)
     }
 }

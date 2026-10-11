@@ -21,10 +21,18 @@ public struct PagerBarContext<Tab: Hashable> {
     /// The settled selection. During a drag this remains the page the
     /// drag started from; use `progress` for continuous rendering.
     public let selection: Tab
-    /// Continuous transition progress in logical page indices.
-    public let progress: PageProgress
     /// Selects a tab, animating the page transition.
     public let select: (Tab) -> Void
+    private let readProgress: () -> PageProgress
+
+    /// Continuous transition progress in logical page indices.
+    ///
+    /// Read lazily: when the pager supplies the context, this reads the
+    /// pager's observable progress at the point of use, so only the view
+    /// whose `body` reads it (the moving indicator, the fading selected
+    /// label) re-evaluates on each frame of a transition. A bar skin
+    /// that reads it in its outer `body` is rebuilt per frame instead.
+    public var progress: PageProgress { readProgress() }
 
     public init(
         tabs: [Tab],
@@ -32,9 +40,18 @@ public struct PagerBarContext<Tab: Hashable> {
         progress: PageProgress,
         select: @escaping (Tab) -> Void
     ) {
+        self.init(tabs: tabs, selection: selection, progressProvider: { progress }, select: select)
+    }
+
+    public init(
+        tabs: [Tab],
+        selection: Tab,
+        progressProvider: @escaping () -> PageProgress,
+        select: @escaping (Tab) -> Void
+    ) {
         self.tabs = tabs
         self.selection = selection
-        self.progress = progress
+        readProgress = progressProvider
         self.select = select
     }
 

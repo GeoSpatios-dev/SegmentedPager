@@ -156,12 +156,39 @@ struct PagerLifecycleTrackerTests {
         ])
     }
 
-    @Test func neighborsPolicyPreloadsNewNeighborsAfterSettle() {
+    /// The settle creates only the page it lands on; the neighbor the
+    /// policy wants comes from the separate preload step the container
+    /// runs once the settled frame is up.
+    @Test func neighborsPolicySettleCreatesOnlyTheLandedPage() {
         let tracker = makeTracker(policy: .neighbors)
         _ = tracker.start()
         let events = tracker.settle(at: 1)
-        #expect(events.contains(.initialize(2)))
+        #expect(!events.contains(.initialize(2)))
+        #expect(!tracker.isInitialized(2))
+
+        let preload = tracker.preloadAroundSelection()
+        #expect(preload == [.initialize(2)])
         #expect(tracker.isInitialized(2))
+        #expect(tracker.preloadAroundSelection().isEmpty)
+    }
+
+    /// Airport detail: Info → Chart used to build Chart and Runway in the
+    /// tap. The tap now builds Chart alone; Runway follows in the preload.
+    @Test func neighborsPolicyProgrammaticSelectionBuildsOnlyTheTarget() {
+        let tracker = makeTracker(pageCount: 5, policy: .neighbors)
+        _ = tracker.start()
+        let events = tracker.selectProgrammatically(4)
+        #expect(events.filter { if case .initialize = $0 { return true } else { return false } } == [.initialize(4)])
+        #expect(!tracker.isInitialized(3))
+
+        #expect(tracker.preloadAroundSelection() == [.initialize(3)])
+    }
+
+    @Test func lazyPolicyPreloadAroundSelectionIsEmpty() {
+        let tracker = makeTracker(pageCount: 5)
+        _ = tracker.start()
+        _ = tracker.selectProgrammatically(2)
+        #expect(tracker.preloadAroundSelection().isEmpty)
     }
 
     @Test func neighborPreloadingMovesAllAdjacentPageCreationOutOfDragTicks() {
@@ -193,6 +220,9 @@ struct PagerLifecycleTrackerTests {
                 }
                 _ = tracker.settle(at: destination)
                 #expect(tracker.selectedIndex == destination)
+                // The container runs this on the runloop turn after the
+                // settle; the drag ticks above never see neighbor creation.
+                _ = tracker.preloadAroundSelection()
             }
 
             #expect(initializedDuringDrag == (policy == .neighbors ? [] : [1, 2, 3, 4]))

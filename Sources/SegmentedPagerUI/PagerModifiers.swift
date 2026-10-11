@@ -43,6 +43,19 @@ extension View {
         environment(\.pagerContentBottomPadding, padding)
     }
 
+    /// Opts the pager into cheap updates. The page, header and bar
+    /// closures are not comparable, so by default every update of the
+    /// pager re-evaluates every hosted root (pages, header, bar) in case a
+    /// closure captured a changed input. With a key, the roots re-evaluate
+    /// only when the key changes, when `tabs`/`selection` change, or when
+    /// an observable environment trait (colour scheme, dynamic type, size
+    /// class, locale, accessibility, …) changes. Pass every value the
+    /// closures capture that is not observed inside the pages themselves;
+    /// state the pages read through an `@Observable` object needs no key.
+    public func pagerContentKey(_ key: AnyHashable?) -> some View {
+        environment(\.pagerContentKey, key)
+    }
+
     /// Continuous header pin progress (0 fully expanded … 1 pinned),
     /// for scroll-linked chrome effects. Pinned bar mode only.
     public func onPagerPinProgress(

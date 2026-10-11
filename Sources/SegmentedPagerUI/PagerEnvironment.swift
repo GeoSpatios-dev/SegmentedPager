@@ -32,6 +32,10 @@ private struct PagerContentBottomPaddingKey: EnvironmentKey {
     static let defaultValue: CGFloat = 0
 }
 
+private struct PagerContentKeyKey: EnvironmentKey {
+    static var defaultValue: AnyHashable? { nil }
+}
+
 private struct PagerPageIsActiveKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -71,6 +75,11 @@ extension EnvironmentValues {
     var pagerContentBottomPadding: CGFloat {
         get { self[PagerContentBottomPaddingKey.self] }
         set { self[PagerContentBottomPaddingKey.self] = newValue }
+    }
+
+    var pagerContentKey: AnyHashable? {
+        get { self[PagerContentKeyKey.self] }
+        set { self[PagerContentKeyKey.self] = newValue }
     }
 
     /// Whether the page containing this view is the pager's settled,

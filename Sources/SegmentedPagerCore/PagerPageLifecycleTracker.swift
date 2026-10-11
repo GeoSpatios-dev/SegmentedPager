@@ -110,13 +110,16 @@ public final class PagerPageLifecycleTracker {
         transition(index, to: .appeared, into: &events)
 
         selectedIndex = index
-        preloadPerPolicy(around: index, into: &events)
         return events
     }
 
     /// Selection changed without a user drag (bar tap, external binding
     /// write). The container animates the offset; lifecycle events are
     /// emitted up front in will/did order.
+    ///
+    /// Only the target page is created here. Neighbor preloading is a
+    /// separate step (`preloadAroundSelection`) so that a tap builds one
+    /// page in its own frame, not up to three.
     public func selectProgrammatically(_ index: Int) -> [PagerPageEvent] {
         guard started, states.indices.contains(index), index != selectedIndex else { return [] }
 
@@ -129,7 +132,18 @@ public final class PagerPageLifecycleTracker {
         transition(index, to: .appeared, into: &events)
 
         selectedIndex = index
-        preloadPerPolicy(around: index, into: &events)
+        return events
+    }
+
+    /// Pages the policy wants created around the current selection that
+    /// do not exist yet. The container runs this once a transition has
+    /// come to rest and its frame has been presented, so neighbor
+    /// construction never lands in the tap, the settle or a drag tick.
+    /// Idempotent: pages already created emit nothing.
+    public func preloadAroundSelection() -> [PagerPageEvent] {
+        guard started else { return [] }
+        var events: [PagerPageEvent] = []
+        preloadPerPolicy(around: selectedIndex, into: &events)
         return events
     }
 

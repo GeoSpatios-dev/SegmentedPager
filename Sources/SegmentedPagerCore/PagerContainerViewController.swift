@@ -216,6 +216,7 @@ public final class PagerContainerViewController: UIViewController {
             updateScrollsToTop(activeIndex: index)
             onProgressChange?(.resting(at: index))
             onSelectionSettled?(index)
+            schedulePreloadAroundSelection()
         }
     }
 
@@ -398,6 +399,24 @@ public final class PagerContainerViewController: UIViewController {
         updateScrollsToTop(activeIndex: index)
         onProgressChange?(.resting(at: index))
         onSelectionSettled?(index)
+        schedulePreloadAroundSelection()
+    }
+
+    /// Neighbor pages per the preload policy are built on the next runloop
+    /// turn after a transition rests, so the frame that lands the selected
+    /// page is presented before any other page is constructed. Building
+    /// them inside the tap or the settle put two hosting-controller
+    /// layouts in the transition frame (airport detail: 10.6% slow frames
+    /// in this container). Skipped when a new transition has started
+    /// meanwhile; the tracker only emits pages that still do not exist.
+    private func schedulePreloadAroundSelection() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  programmaticTargetIndex == nil,
+                  !scrollView.isDragging, !scrollView.isDecelerating
+            else { return }
+            apply(events: tracker.preloadAroundSelection())
+        }
     }
 
     private func updateScrollsToTop(activeIndex: Int) {
@@ -449,6 +468,7 @@ extension PagerContainerViewController: UIScrollViewDelegate {
             updateScrollsToTop(activeIndex: target)
             onProgressChange?(.resting(at: target))
             onSelectionSettled?(target)
+            schedulePreloadAroundSelection()
         }
     }
 }

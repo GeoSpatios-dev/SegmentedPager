@@ -3,42 +3,42 @@
 //  Package.swift
 //  SegmentedPager
 //
-//  Created by yousanflics.
+//  Keep-alive segmented paging for SwiftUI on iOS.
 //
-//  Local Swift package for segmented paging with per-page scroll retention,
-//  native UIKit gesture arbitration, explicit page lifecycle, and smooth
-//  sticky-header coordination.
-//
-//  - SegmentedPagerCore: UIKit container + pure geometry/state machines.
-//    No SwiftUI import. UIKit-dependent files are gated behind
-//    `#if canImport(UIKit)` so pure logic builds and tests on macOS.
-//  - SegmentedPagerUI: SwiftUI adapter (SegmentedPager view, page scroll
-//    container, environment bridging, bar protocol).
+//  - SegmentedPagerCore: UIKit container, page lifecycle state machine,
+//    sticky-chrome coordination and geometry. No SwiftUI. UIKit-dependent
+//    files are gated behind `#if canImport(UIKit)`, so the pure logic
+//    builds and tests on macOS.
+//  - SegmentedPagerUI: the SwiftUI `SegmentedPager` view, page scroll
+//    container, bar context and configuration modifiers.
 //
 
 import PackageDescription
 
 let package = Package(
     name: "SegmentedPager",
-    platforms: [.iOS(.v18), .macOS(.v15)],
+    platforms: [
+        .iOS(.v18),
+        .macOS(.v15),
+    ],
     products: [
-        .library(name: "SegmentedPagerCore", targets: ["SegmentedPagerCore"]),
         .library(name: "SegmentedPagerUI", targets: ["SegmentedPagerUI"]),
+        .library(name: "SegmentedPagerCore", targets: ["SegmentedPagerCore"]),
     ],
     targets: [
-        .target(
-            name: "SegmentedPagerCore",
-            path: "Sources/SegmentedPagerCore"
-        ),
+        .target(name: "SegmentedPagerCore"),
         .target(
             name: "SegmentedPagerUI",
-            dependencies: ["SegmentedPagerCore"],
-            path: "Sources/SegmentedPagerUI"
+            dependencies: ["SegmentedPagerCore"]
         ),
         .testTarget(
-            name: "SegmentedPagerTests",
-            dependencies: ["SegmentedPagerCore", "SegmentedPagerUI"],
-            path: "Tests/SegmentedPagerTests"
+            name: "SegmentedPagerCoreTests",
+            dependencies: ["SegmentedPagerCore"]
         ),
-    ]
+        .testTarget(
+            name: "SegmentedPagerUITests",
+            dependencies: ["SegmentedPagerCore", "SegmentedPagerUI"]
+        ),
+    ],
+    swiftLanguageModes: [.v6]
 )

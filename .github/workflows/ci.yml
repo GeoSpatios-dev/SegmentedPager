@@ -40,3 +40,15 @@ jobs:
           grep -E "Test run with|Suite .* (passed|failed)|error:|failed" xcodebuild.log | tail -30
           if [ $status -ne 0 ]; then tail -80 xcodebuild.log; fi
           exit $status
+      - name: Build Examples
+        working-directory: Examples
+        run: |
+          set +e
+          xcodebuild build \
+            -scheme SegmentedPagerExamples \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipPackagePluginValidation \
+            > examples.log 2>&1
+          status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" examples.log | tail -20
+          exit $status

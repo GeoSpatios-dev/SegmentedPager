@@ -16,6 +16,9 @@ import UIKit
 
 @MainActor
 struct PagerStickyCoordinatorTests {
+    // Explicit: a nested type is not main-actor-isolated by its parent on
+    // Swift 6.0 toolchains (Xcode 16.x), and `anchor` reads UIKit state.
+    @MainActor
     private struct Harness {
         let sticky: PagerStickyCoordinator
         let overlay: PagerChromeOverlay

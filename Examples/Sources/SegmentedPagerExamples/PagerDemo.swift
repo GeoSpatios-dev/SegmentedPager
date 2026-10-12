@@ -1,6 +1,6 @@
 //
 //  PagerDemo.swift
-//  SegmentedPager
+//  SegmentedPagerExamples
 //
 //  Created by yousanflics on 7/1/26.
 //
@@ -14,7 +14,8 @@
 //  lifecycle callbacks (Xcode previews also work for a first pass).
 //
 
-#if DEBUG && canImport(UIKit)
+#if canImport(UIKit)
+import SegmentedPagerUI
 import SwiftUI
 
 private enum DemoTab: String, CaseIterable, Hashable {
@@ -24,10 +25,14 @@ private enum DemoTab: String, CaseIterable, Hashable {
     case state = "State"
 }
 
-private struct PagerDemoView: View {
+/// Fixed bar above the pages: feed, nested horizontal scrollers, long text
+/// and a keep-alive proof page.
+public struct PagerDemoView: View {
+    public init() {}
+
     @State private var selection: DemoTab = .feed
 
-    var body: some View {
+    public var body: some View {
         SegmentedPager(
             tabs: DemoTab.allCases,
             selection: $selection,
@@ -48,7 +53,7 @@ private struct PagerDemoView: View {
     }
 
     @ViewBuilder
-    static func pageContent(for tab: DemoTab) -> some View {
+    fileprivate static func pageContent(for tab: DemoTab) -> some View {
         switch tab {
         case .feed:
             feedPage
@@ -170,13 +175,16 @@ private struct StateDemoPage: View {
 /// Sticky-header demo: interactive header (tap vs drag coexistence),
 /// dynamic header height, pin-progress readout, and deep/shallow page
 /// combinations to exercise every OffsetSyncRule quadrant by hand.
-private struct PinnedPagerDemoView: View {
+/// Collapsing header with a pinning bar and scroll-linked pin progress.
+public struct PinnedPagerDemoView: View {
+    public init() {}
+
     @State private var selection: DemoTab = .feed
     @State private var headerTaps = 0
     @State private var isHeaderExpanded = false
     @State private var pinProgress: CGFloat = 0
 
-    var body: some View {
+    public var body: some View {
         SegmentedPager(
             tabs: DemoTab.allCases,
             selection: $selection,

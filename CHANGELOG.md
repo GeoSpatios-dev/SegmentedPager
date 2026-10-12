@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-12
+
 ### Changed
 - Sources grouped by responsibility (`Container`, `Lifecycle`, `Sticky`, `Geometry`; `Bar`, `Page`, `Configuration`). No API change.
 - Tests split into `SegmentedPagerCoreTests` and `SegmentedPagerUITests`, one per module.
@@ -33,6 +35,7 @@ First standalone release, extracted from the Ascent iOS app with its history.
 - `PagerBarContext.progress` is a lazy read of the pager's progress, so only its readers re-render per frame.
 - A tap or a settle creates only the selected page; `.neighbors` preloading runs on the next run-loop turn.
 
-[Unreleased]: https://github.com/GeoSpatios-dev/SegmentedPager/compare/1.0.1...HEAD
+[Unreleased]: https://github.com/GeoSpatios-dev/SegmentedPager/compare/1.0.2...HEAD
+[1.0.2]: https://github.com/GeoSpatios-dev/SegmentedPager/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/GeoSpatios-dev/SegmentedPager/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/GeoSpatios-dev/SegmentedPager/releases/tag/1.0.0
